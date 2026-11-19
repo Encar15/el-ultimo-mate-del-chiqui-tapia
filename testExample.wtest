@@ -1,0 +1,104 @@
+import wollok.game.*
+import detectives.*
+import colisiones.*
+import cuadroDeTexto.*
+import habitaciones.*
+import interacciones.*
+import objetos.*
+import restoPersonajes.*
+import dialogos.*
+import menu.*
+import instancias.*
+import estados.*
+import directorJuego.*
+
+describe "1. Movimiento y Colisiones" {
+    method initialize() {
+        nivel.reiniciarEstado()
+        estacionamiento.entrar()
+    }
+
+    test "Patricio arranca en (7,9) mirando hacia abajo" {
+        assert.equals(game.at(7,9), patricioJuan.position())
+        assert.equals(abajo, patricioJuan.direccion())
+    }
+
+    test "Patricio no atraviesa paredes ni bordes del mapa" {
+        patricioJuan.mover(arriba) // (7,10) es pared en estacionamiento
+        assert.equals(game.at(7,9), patricioJuan.position())
+    }
+
+    test "El escenario bloquea sus bordes pero permite entrar por la escalera" {
+        assert.that(escenario.ocupa(game.at(9,5)))
+        assert.notThat(escenario.ocupa(game.at(8,8))) // entrada de la escalera
+    }
+}
+
+describe "2. Puertas, Requisitos e Informantes con Pedido" {
+    method initialize() {
+        nivel.reiniciarEstado()
+        recepcion.entrar()
+    }
+
+    test "Con la acreditación obtenida de la recepcionista se habilita la sala de prensa" {
+        recepcionista.interactuar(patricioJuan)
+        recepcionista.finalizarInteraccion()
+        puertaRecepcionASalaDePrensa.interactuar(patricioJuan)
+        assert.equals(salaDePrensa, mapa.habitacionActual())
+    }
+
+    test "Un informante con pedido no entrega su pista hasta recibir el ítem" {
+        forense.interactuar(patricioJuan)
+        forense.finalizarInteraccion()
+        assert.notThat(menu.tieneTodas([informeForense]))
+
+        menu.guardarPista(bolsa)
+        forense.interactuar(patricioJuan)
+        forense.finalizarInteraccion()
+        assert.that(menu.tieneTodas([informeForense]))
+    }
+}
+
+describe "3. Interrogatorios, Humor y Consecuencias en el Mapa" {
+    method initialize() {
+        nivel.reiniciarEstado()
+    }
+
+    test "Las preguntas con requisitos no están disponibles hasta encontrar la pista" {
+        assert.notThat(preguntaPresidente2.esPreguntable())
+        menu.guardarPista(informeForense)
+        assert.that(preguntaPresidente2.esPreguntable())
+    }
+
+    test "Darle el porro al guardia hace que se corra de la puerta de la oficina" {
+        assert.equals(game.at(1,5), guardia.position())
+        preguntaGuardiaPorro.responder(guardia)
+        assert.equals(game.at(1,7), guardia.position())
+    }
+}
+
+describe "4. Condiciones de Victoria y Veredicto" {
+    method initialize() {
+        nivel.reiniciarEstado()
+    }
+
+    test "El culpable no puede ir preso si faltan pistas necesarias" {
+        menu.guardarPista(termo)
+        assert.notThat(presidenteFifa.puedeIrPreso())
+    }
+
+    test "El culpable va preso únicamente cuando se reúnen las tres pruebas clave" {
+        menu.guardarPista(termo)
+        menu.guardarPista(conversacionesWhatsapp)
+        menu.guardarPista(informeForense)
+        assert.that(presidenteFifa.puedeIrPreso())
+    }
+
+    test "Un sospechoso inocente nunca puede ir preso aunque estén todas las pistas" {
+        menu.guardarPista(termo)
+        menu.guardarPista(conversacionesWhatsapp)
+        menu.guardarPista(informeForense)
+        assert.notThat(tesorero.puedeIrPreso())
+        assert.notThat(delantero.puedeIrPreso())
+    }
+}
