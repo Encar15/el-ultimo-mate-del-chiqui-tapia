@@ -7,13 +7,6 @@ if (!fs.existsSync("game-index.js")) {
 
 let code = fs.readFileSync("game-index.js", "utf8");
 
-// Ver definición de x( para saber qué toca la fuente
-const idxX = code.indexOf("function x(");
-if (idxX !== -1) {
-  console.log("=== FUNCION x ===");
-  console.log(code.slice(idxX, idxX + 450));
-}
-
 const s1 = 'i=t(n,o,"textColor")';
 const r1 = 'i=t(n,o,"textColor"),ts=t(n,o,"textSize")';
 
@@ -24,14 +17,8 @@ const s3 = "text:p,textColor:a}=i";
 const r3 = "text:p,textColor:a,textSize:f}=i";
 
 const s4 = "p&&T(o,p,l,b,S,a)";
-const r4 = "p&&T(o,p,l,b,Number(f)>0?Number(f):S,a)";
-
-console.log("Matches:", {
-  m1: code.includes(s1),
-  m2: code.includes(s2),
-  m3: code.includes(s3),
-  m4: code.includes(s4),
-});
+const r4 =
+  "p&&(()=>{const sz=Number(f)>0?Number(f):S;if(!window.__tsDebug){window.__tsDebug={f,S,sz,canvasW:o.width,canvasH:o.height};console.log('DEBUG textSize:',window.__tsDebug);}T(o,p,l,b,sz,a);})()";
 
 code = code
   .replaceAll(s1, r1)
@@ -40,3 +27,4 @@ code = code
   .replaceAll(s4, r4);
 
 fs.writeFileSync("game-index.js", code, "utf8");
+console.log("Parche v7 con debug en consola aplicado");
