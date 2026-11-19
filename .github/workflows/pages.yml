@@ -21,9 +21,9 @@ jobs:
         run: node .github/parchear-texto.js
 
       - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v4
+        uses: actions/upload-pages-artifact@v3
         with:
           path: .
 
       - name: Deploy
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v3
