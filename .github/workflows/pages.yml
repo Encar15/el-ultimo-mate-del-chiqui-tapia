@@ -21,42 +21,14 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            const path = require("path");
-
-            function buscarArchivosJS(dir) {
-              let resultados = [];
-              for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-                const full = path.join(dir, entry.name);
-                if (entry.isDirectory() && entry.name !== ".git" && entry.name !== "node_modules") {
-                  resultados = resultados.concat(buscarArchivosJS(full));
-                } else if (entry.isFile() && entry.name.endsWith(".js")) {
-                  resultados.push(full);
-                }
-              }
-              return resultados;
-            }
-
-            const archivos = buscarArchivosJS(".");
-            console.log("Archivos JS encontrados:", archivos);
-
-            for (const archivo of archivos) {
-              let contenido = fs.readFileSync(archivo, "utf8");
-              if (contenido.includes("textSize")) {
-                console.log("Match de textSize en:", archivo);
-                // Muestra contexto alrededor de textSize para depurar si hace falta
-                const idx = contenido.indexOf("textSize");
-                console.log("Fragmento original:", contenido.slice(Math.max(0, idx - 120), idx + 180));
-
-                // Reemplaza p.textSize(NUMERO) por lectura dinámica de visual.textSize (o visual.message("textSize"))
-                const nuevo = contenido.replace(
-                  /([a-zA-Z0-9_$]+)\.textSize\(\s*(\d+)\s*\)/g,
-                  "$1.textSize((typeof visual !== \"undefined\" && visual.textSize) ? Number(visual.textSize) : $2)"
-                );
-
-                if (nuevo !== contenido) {
-                  fs.writeFileSync(archivo, nuevo, "utf8");
-                  console.log("Parche aplicado con éxito en:", archivo);
-                }
+            for (const archivo of ["game-index.js", "game-runner.js"]) {
+              if (!fs.existsSync(archivo)) continue;
+              const contenido = fs.readFileSync(archivo, "utf8");
+              let pos = 0;
+              while ((pos = contenido.indexOf("textColor", pos)) !== -1) {
+                console.log("=== MATCH EN", archivo, "===");
+                console.log(contenido.slice(Math.max(0, pos - 250), pos + 350));
+                pos += 9;
               }
             }
           '
