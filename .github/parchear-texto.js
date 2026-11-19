@@ -7,22 +7,22 @@ if (!fs.existsSync("game-index.js")) {
 
 let code = fs.readFileSync("game-index.js", "utf8");
 
-const idxSend = code.indexOf('n.send("position"');
-if (idxSend !== -1) {
-  console.log("=== ALREDEDOR DE n.send ===");
-  console.log(code.slice(Math.max(0, idxSend - 250), idxSend + 300));
-}
-
-// Mantener el parche funcionando
+// 1. Invocar el método textSize() en Wollok mediante n.send("textSize", o)
 const s1 = 'i=t(n,o,"textColor")';
-const r1 = 'i=t(n,o,"textColor"),ts=t(n,o,"textSize")';
+const r1 =
+  'i=t(n,o,"textColor"),ts=(()=>{try{const r=n.send("textSize",o);return r?.innerNumber??o.get("tamanioDeLetra")?.innerNumber}catch(e){return o.get("tamanioDeLetra")?.innerNumber}})()';
+
+// 2. Incluir textSize en el objeto visual devuelto
 const s2 = "textColor:i,message:p,messageTime:a";
 const r2 = "textColor:i,textSize:ts,message:p,messageTime:a";
+
+// 3. Desestructurar textSize:f en el loop de renderizado
 const s3 = "text:p,textColor:a}=i";
 const r3 = "text:p,textColor:a,textSize:f}=i";
+
+// 4. Pasar f*2 a T (porque T multiplica por 0.5 internamente) cuando f > 0
 const s4 = "p&&T(o,p,l,b,S,a)";
-const r4 =
-  "p&&(()=>{const sz=Number(f)>0?Number(f):S;if(!window.__tsDebug){window.__tsDebug={f,S,sz,canvasW:o.width,canvasH:o.height};console.log('DEBUG textSize:',window.__tsDebug);}T(o,p,l,b,sz,a);})()";
+const r4 = "p&&T(o,p,l,b,Number(f)>0?Number(f)*2:S,a)";
 
 code = code
   .replaceAll(s1, r1)
@@ -31,3 +31,4 @@ code = code
   .replaceAll(s4, r4);
 
 fs.writeFileSync("game-index.js", code, "utf8");
+console.log("Parche v8 (n.send textSize) aplicado");
