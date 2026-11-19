@@ -62,7 +62,7 @@ class Escena {
         cinematicas.siguiente()
     }
 }
-
+//asas
 class EscenaConDuracion inherits Escena {
     const cantidadDeFrames
     const duracionDeFrame
