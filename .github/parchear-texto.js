@@ -1,24 +1,13 @@
 const fs = require("fs");
 
-if (!fs.existsSync("game-index.js")) {
-  console.log("No se encontró game-index.js");
-  process.exit(0);
-}
-
 let code = fs.readFileSync("game-index.js", "utf8");
 
-// Diagnóstico: ver qué hace la función T( que dibuja el texto
-const idxT = code.indexOf("function T(");
-if (idxT !== -1) {
-  console.log("=== FUNCION T ===");
-  console.log(code.slice(idxT, idxT + 600));
-}
+// 1. Ver el contexto real alrededor de p&&T(o,p,l,b,S,a) para diagnóstico
+const idxRender = code.indexOf("p&&T(o,p,l,b,S,a)");
+console.log("Índice de renderizado:", idxRender);
 
-// 1. Leer textSize() de forma segura (soporta tanto string/number JS como RuntimeObject de Wollok)
-const extractor = `
-  i=t(n,o,"textColor"),
-  ts=(()=>{const v=t(n,o,"textSize");return v&&typeof v==="object"?v.innerNumber:Number(v)||null})()
-`.replace(/\n\s*/g, "");
+// 2. Extraer textSize() desde Wollok usando el helper t(n, o, "textSize")
+const extractor = `i=t(n,o,"textColor"),ts=(()=>{try{const v=t(n,o,"textSize");return v==null?null:(typeof v==="object"&&"innerNumber"in v?v.innerNumber:Number(v))||null}catch(e){return null}})()`;
 
 code = code.replaceAll('i=t(n,o,"textColor")', extractor);
 code = code.replaceAll(
@@ -26,30 +15,22 @@ code = code.replaceAll(
   "textColor:i,textSize:ts,message:p,messageTime:a"
 );
 
-// 2. Pasar i.textSize como 7mo parámetro a T(...) y aplicarlo DENTRO de T después de su textSize por defecto
+// 3. Interceptar o.textSize en la instancia de p5.js (o) durante T(...)
+// Si i.textSize existe, bloqueamos que T(...) lo pise con un tamaño fijo
 code = code.replace(
   "p&&T(o,p,l,b,S,a)",
-  "p&&T(o,p,l,b,S,a,i.textSize)"
+  `p&&(()=>{
+    if(i.textSize){
+      const orig=o.textSize.bind(o);
+      orig(i.textSize);
+      o.textSize=()=>{};
+      T(o,p,l,b,S,a);
+      o.textSize=orig;
+    }else{
+      T(o,p,l,b,S,a);
+    }
+  })()`
 );
-
-code = code.replace(
-  /function T\(([^)]+)\)\{/,
-  "function T($1,customSize){"
-);
-
-// Si adentro de T llama a e.textSize(...) o similar antes de .text(, lo pisamos justo antes de .text(
-if (idxT !== -1) {
-  const cuerpoT = code.slice(idxT, idxT + 600);
-  const matchTextCall = cuerpoT.match(/([a-zA-Z0-9_$]+)\.text\(/);
-  if (matchTextCall) {
-    const p5var = matchTextCall[1];
-    const cuerpoParcheado = cuerpoT.replace(
-      `${p5var}.text(`,
-      `customSize&&${p5var}.textSize(customSize),${p5var}.text(`
-    );
-    code = code.slice(0, idxT) + cuerpoParcheado + code.slice(idxT + 600);
-  }
-}
 
 fs.writeFileSync("game-index.js", code, "utf8");
-console.log("Parche v2 aplicado");
+console.log("Parche v3 aplicado correctamente");
