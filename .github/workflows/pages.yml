@@ -21,16 +21,26 @@ jobs:
         run: |
           node -e '
             const fs = require("fs");
-            for (const archivo of ["game-index.js", "game-runner.js"]) {
-              if (!fs.existsSync(archivo)) continue;
-              const contenido = fs.readFileSync(archivo, "utf8");
-              let pos = 0;
-              while ((pos = contenido.indexOf("textColor", pos)) !== -1) {
-                console.log("=== MATCH EN", archivo, "===");
-                console.log(contenido.slice(Math.max(0, pos - 250), pos + 350));
-                pos += 9;
-              }
-            }
+            let code = fs.readFileSync("game-index.js", "utf8");
+
+            // 1. Inyectar lectura de textSize() en get visuals() (aparece 2 veces en el bundle)
+            code = code.replaceAll(
+              `i=t(n,o,"textColor")`,
+              `i=t(n,o,"textColor"),ts=Number(t(n,o,"textSize"))||null`
+            );
+            code = code.replaceAll(
+              `textColor:i,message:p,messageTime:a`,
+              `textColor:i,textSize:ts,message:p,messageTime:a`
+            );
+
+            // 2. Aplicar o.textSize(i.textSize) antes de dibujar el texto T(o,p,l,b,S,a)
+            code = code.replace(
+              `p&&T(o,p,l,b,S,a)`,
+              `p&&(i.textSize&&o.textSize(i.textSize),T(o,p,l,b,S,a))`
+            );
+
+            fs.writeFileSync("game-index.js", code, "utf8");
+            console.log("Parche aplicado correctamente en game-index.js");
           '
 
       - name: Upload Pages artifact
